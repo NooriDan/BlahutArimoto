@@ -1,11 +1,9 @@
 import torch
 from torch.distributions.normal import Normal
 from tqdm import tqdm  # for progress bar
-from datetime import datetime
 
-# Class implementation
 class BlahutArimoto:
-    def __init__(self, A=1, sigma=1, max_iter=1000, NX=500, NY=1000, tolerance=1e-6, epsilon=1e-12,
+    def __init__(self, A=1, sigma=1, max_iter=10000, NX=500, NY=1000, tolerance=1e-6, epsilon=1e-12,
                  printInit=False, earlyStop=True, device=None):
         # Default variables
         self.A = A
@@ -18,6 +16,11 @@ class BlahutArimoto:
         self.printInit = printInit
         self.earlyStop = earlyStop
         self.device = device if device else ("cuda" if torch.cuda.is_available() else "cpu")
+
+        if self.printInit:
+            print(f"Device: {self.device}")
+            print(f"A = {self.A}, sigma = {self.sigma}, max_iter = {self.max_iter}, NX = {self.NX}, NY = {self.NY}")
+            print(f"tolerance = {self.tolerance}, epsilon = {self.epsilon}")
 
         # To be computed
         self.x = None
@@ -62,8 +65,8 @@ class BlahutArimoto:
         self.capacity = torch.sum(self.p_x.flatten() * torch.sum(self.p_y_given_x * log_ratio, dim=0)).item()
 
     @staticmethod
-    def theoreticalCapacity(P, _sigma=1):
-        return 0.5 * torch.log2(1 + P / _sigma**2).item()
+    def theoreticalCapacity(P=1, _sigma=1):
+        return 0.5 * torch.log2(1 + torch.tensor(P / _sigma**2)).item()
 
     def getMeanPower(self):
         self.mean_power = torch.sum(self.p_x * (self.x**2)).item()
@@ -77,7 +80,7 @@ class BlahutArimoto:
         self.theoretical_c = None
         self.mean_power = None
 
-    def run(self, recordFrequency=50):
+    def runAlgorithm(self, recordFrequency=50):
         self.clearRecords()
         # Discretize the input and output alphabets
         self.x = torch.linspace(-self.A, self.A, self.NX, device=self.device)
@@ -122,6 +125,8 @@ class BlahutArimoto:
 
         self.computeChannelCapacity()
         self.getMeanPower()
+
+
 
         return {
             "A": self.A,
